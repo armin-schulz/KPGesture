@@ -11,7 +11,12 @@ class Color(Enum):
     RED = ('red', (255, 0, 0))
     BLUE = ('blue', (0, 0, 255))
     GREEN = ('green', (0, 255, 0))
-    ORANGE = ('orange', (236, 148, 12))
+    ORANGE = ('orange', (255, 155, 0))
+    YELLOW = ('yellow', (255, 255, 0))
+    VIOLET = ('violet', (117, 57, 199))
+    BROWN = ('brown', (236, 148, 12))
+    GREY = ('grey', (164, 180, 178))
+    TURQUOISE = ('turquoise', (0,128,128))
 
     def __init__(self, name: str, rgb: tuple[int, int, int]):
         self.__name = name
@@ -23,8 +28,11 @@ class Color(Enum):
         cv uses bgr
         """
         return self.__rgb[::-1]
-        #return (self.__rgb[2], self.__rgb[1], self.__rgb[0])
 
     @property
     def name(self) -> str:
         return self.__name
+
+    @classmethod
+    def values(cls) -> list['Color']:
+        return list(cls.__members__.values())

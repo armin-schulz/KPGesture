@@ -32,6 +32,10 @@ class Hand:
         return self.__active
 
     @property
+    def thumb(self) -> Thumb:
+        return self.__thumb
+
+    @property
     def index(self) -> Finger:
         return self.__index
 
