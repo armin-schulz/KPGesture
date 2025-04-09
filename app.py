@@ -1,5 +1,6 @@
 import logging
 
+from app_util import setup_logging
 from painting import painting
 from exploration import exploration
 from config import MODE
@@ -19,4 +20,5 @@ def main():
 
 
 if __name__ == '__main__':
+    setup_logging()
     main()

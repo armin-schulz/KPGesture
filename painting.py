@@ -1,5 +1,9 @@
 
 
 def painting():
-    pass
+
+
+
+    while True:
+        pass
 
