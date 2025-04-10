@@ -38,8 +38,26 @@ def draw_lines(image: NDArray[np.uint8], points: NDArray[int], color: Color = FO
 
 
 def draw_line(image: NDArray[np.uint8], source: NDArray[int], target: NDArray[int], color: Color = FONT_COLOR,
-              thickness: int = LINE_THICKNESS) -> None:
-    cv2.line(image, source, target, color.rgb, thickness)
+              color_rgb: tuple[np.uint8, np.uint8, np.uint8,] = None, thickness: int = LINE_THICKNESS) -> None:
+    color_value = color.rgb if color_rgb is None else color_rgb
+    cv2.line(image, source, target, color_value, thickness)
+
+
+def draw_line_alpha(image: NDArray[np.uint8], source: tuple[int, int], target: tuple[int, int], alpha: float,
+                    color: Color = FONT_COLOR, color_rgb: tuple[int, int, int] = None,
+                    thickness: int = LINE_THICKNESS) -> None:
+    # Get the final color
+    color_value = color.rgb if color_rgb is None else color_rgb
+    color_value = tuple(int(c) for c in color_value)  # Ensure it's int tuple
+
+    # Create an overlay
+    overlay = image.copy()
+
+    # Draw on the overlay
+    cv2.line(overlay, source, target, color_value, thickness)
+
+    # Blend overlay with original image
+    cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0, image)
 
 def emposeFrame(f: NDArray[bool], image: NDArray[np.uint8], pos: NDArray[int] = np.zeros(2, dtype=int),
            color: Color = FONT_COLOR) -> None:

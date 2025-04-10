@@ -20,3 +20,9 @@ def calc_angles(arr: NDArray[int]) -> NDArray[float]:
 
 def calc_distance(a: NDArray[int], b: NDArray[int]) -> float:
     return np.linalg.norm(a - b)
+
+
+def calc_distance_2d(a: tuple[int, int,], b: tuple[int, int,]) -> float:
+    dx = b[0] - a[0]
+    dy = b[1] - a[1]
+    return (dx ** 2 + dy ** 2)**0.5

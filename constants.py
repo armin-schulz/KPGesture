@@ -26,3 +26,6 @@ RIGHT_COLOR = Color.BLUE
 
 # Geometry
 DEG_IN_RAD = 0.017  # rad [0.017453292519 ^= 1°]
+
+# Coordinates
+INDEX_INDEX_LMS = 8
