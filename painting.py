@@ -15,7 +15,7 @@ from numpy.typing import NDArray
 
 from algebra import calc_distance_2d
 from app_util import get_colors_simple, shrink_list, bend_list
-from config import MAX_QUEUE_LENGTH, DRAW_THICKNESS, AUTO_COOLDOWN, MANUAL_COOLDOWN
+from config import MAX_QUEUE_LENGTH, DRAW_THICKNESS, AUTO_COOLDOWN, MANUAL_COOLDOWN, MAX_FRAME_DISTANCE
 from constants import IMAGE_WIDTH, IMAGE_HEIGHT, INDEX_INDEX_LMS, SKIP
 from exploration import get_colored_image
 
@@ -56,7 +56,7 @@ def add_to_positions(current: tuple[int, int,] | None, previous: tuple[int, int,
     """
     if current is not None:
         movement = 999 if previous is None else calc_distance_2d(previous, current)
-        if movement < 200:
+        if movement < MAX_FRAME_DISTANCE:
             left_index_positions.append(current)
             return current, False
     return previous, True

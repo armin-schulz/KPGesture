@@ -1,10 +1,13 @@
 import copy
 import logging
 import logging.config
+import json
 
 
 def setup_logging() -> None:
-    logging.config.fileConfig('logging.conf')
+    with open('logging_config.json', 'r') as f:
+        config = json.load(f)
+    logging.config.dictConfig(config)
 
 
 def get_colors_simple() -> list[tuple[int, ...]]:
