@@ -17,7 +17,6 @@ from algebra import calc_distance_2d
 from app_util import get_colors_simple, shrink_list, bend_list
 from config import MAX_QUEUE_LENGTH, DRAW_THICKNESS, AUTO_COOLDOWN, MANUAL_COOLDOWN, MAX_FRAME_DISTANCE
 from constants import IMAGE_WIDTH, IMAGE_HEIGHT, INDEX_INDEX_LMS, SKIP
-from exploration import get_colored_image
 
 WHITE_TUPLE = (255, 255, 255)
 BLUE_TUPLE = (255, 0, 0)
@@ -139,7 +138,7 @@ def painting():
         else:
             if keyboard.is_pressed('f'):
                 image_path_man = manual_dir.joinpath(f'{str(manual_counter)}.png')
-                print(f'INFO: Speicher Foto: {image_path_man}.')
+                logger.info(f'Speichere Foto: {image_path_man}.')
                 write_image(image_raw, colors, thicknesses, left_positions, right_positions, str(image_path_man))
                 manual_counter += 1
                 manual_cooldown = MANUAL_COOLDOWN
@@ -151,6 +150,7 @@ def painting():
                     auto_cooldown -= 1
                 else:
                     image_path_auto = auto_dir.joinpath(f'{str(auto_counter)}.png')
+                    logger.info(f'Speichere Foto: {image_path_auto}.')
                     write_image(image_raw, colors, thicknesses, left_positions, right_positions, str(image_path_auto))
                     auto_counter += 1
                     auto_cooldown = AUTO_COOLDOWN
