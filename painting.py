@@ -1,8 +1,10 @@
 import logging
 import os
+import sys
 import time
 import datetime
 from pathlib import Path
+from typing import Tuple
 
 import cv2
 import keyboard
@@ -15,7 +17,7 @@ from numpy.typing import NDArray
 
 from algebra import calc_distance_2d
 from app_util import get_colors_simple, shrink_list, bend_list
-from config import MAX_QUEUE_LENGTH, DRAW_THICKNESS, AUTO_COOLDOWN, MANUAL_COOLDOWN, MAX_FRAME_DISTANCE
+from config import DRAW_LENGTH, THICKNESS, COOLDOWN_AUTO, COOLDOWN_MANUAL, JUMP_LIMIT
 from constants import IMAGE_WIDTH, IMAGE_HEIGHT, INDEX_INDEX_LMS, SKIP
 
 WHITE_TUPLE = (255, 255, 255)
@@ -55,7 +57,7 @@ def add_to_positions(current: tuple[int, int,] | None, previous: tuple[int, int,
     """
     if current is not None:
         movement = 999 if previous is None else calc_distance_2d(previous, current)
-        if movement < MAX_FRAME_DISTANCE:
+        if movement < JUMP_LIMIT:
             left_index_positions.append(current)
             return current, False
     return previous, True
@@ -72,7 +74,6 @@ def draw_positions_connections(positions: deque[tuple[int, int,]], colors: list[
 
 
 def create_image_dirs(dir_id: str) -> tuple[Path, Path,]:
-
     current_dir = Path(__file__).parent.absolute()
     image_dir = Path(current_dir).joinpath('fotos')
     personal_dir = image_dir.joinpath(dir_id)
@@ -94,21 +95,57 @@ def write_image(image_raw: NDArray[np.uint8], colors: list[tuple[int, int, int,]
     cv2.imwrite(image_path, image_write)
 
 
-def painting():
+def get_options(args: list[str]) -> tuple[int, ...]:
+    """
+    Respect README.md...
+    """
+    line_length = DRAW_LENGTH
+    thickness = THICKNESS
+    jump_limit = JUMP_LIMIT
+    cooldown_auto = COOLDOWN_AUTO
+    cooldown_manual = COOLDOWN_MANUAL
+    given_options = {p[0]: p[1] for p in map(lambda p: p if len(p) == 2 else [p[0], ''],
+                                             map(lambda s: s.split('=', maxsplit=2), args))}
+
+    values = [line_length, thickness, jump_limit, cooldown_auto, cooldown_manual]
+    keys = ['DRAW_LENGTH', 'THICKNESS', 'JUMP_LIMIT', 'COOLDOWN_AUTO', 'COOLDOWN_MANUAL']
+
+    for i, k in enumerate(keys):
+        try:
+            x = given_options.get(k)
+            if x is None:
+                raise ValueError(f'Arg {k} not set.')
+            values[i] = int(x)
+            logger.info(f'Set {k}={values[i]} from arg.')
+        except ValueError as e:
+            logger.info(f'Can not get value from key {k}. Use default {values[i]}: {e}')
+    return tuple(values)
+
+
+def painting(args: list[str] | None = None) -> None:
+    if args is None:
+        args = list()
+    line_length, thickness, jump_limit, auto_cooldown, manual_cooldown = get_options(args)
+    logger.info(f'''Options
+    line length: {line_length} entries
+    thickness: {thickness} pixels
+    jump limit: {jump_limit} pixels
+    cooldown auto: {auto_cooldown} frames
+    cooldown manual: {manual_cooldown} frames''')
+
     manual_dir, auto_dir = create_image_dirs(datetime.datetime.fromtimestamp(time.time()).strftime('%d_%m_%Y_%H_%M_%S'))
     manual_counter, auto_counter = 1, 1
-    manual_cooldown, auto_cooldown = MANUAL_COOLDOWN, AUTO_COOLDOWN
     captor = cv2.VideoCapture(0)
     captor.set(3, IMAGE_WIDTH)
     captor.set(4, IMAGE_HEIGHT)
     hand_detector = HandDetector()
     all_colors = get_colors_simple()
-    colors = shrink_list(all_colors, MAX_QUEUE_LENGTH)
-    thicknesses = bend_list(1, DRAW_THICKNESS, MAX_QUEUE_LENGTH)
-    radius = DRAW_THICKNESS
+    colors = shrink_list(all_colors, line_length)
+    thicknesses = bend_list(1, thickness, line_length)
+    radius = THICKNESS
     image_middle = (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2)
 
-    left_positions, right_positions = deque(maxlen=MAX_QUEUE_LENGTH), deque(maxlen=MAX_QUEUE_LENGTH)
+    left_positions, right_positions = deque(maxlen=line_length), deque(maxlen=line_length)
     left_positions.append(image_middle)
     left_positions.append(image_middle)
     right_positions.append(image_middle)
@@ -126,7 +163,7 @@ def painting():
         draw_positions_connections(left_positions, colors, thicknesses, image)
         draw_positions_connections(right_positions, colors, thicknesses, image)
 
-        radius = radius - 2 if radius > 4 else DRAW_THICKNESS // 2
+        radius = radius - 2 if radius > 4 else THICKNESS // 2
         if missing_left:
             cv2.circle(image, previous_left, radius, WHITE_TUPLE, thickness=3)
         if missing_right:
@@ -141,11 +178,11 @@ def painting():
                 logger.info(f'Speichere Foto: {image_path_man}.')
                 write_image(image_raw, colors, thicknesses, left_positions, right_positions, str(image_path_man))
                 manual_counter += 1
-                manual_cooldown = MANUAL_COOLDOWN
-                auto_cooldown = AUTO_COOLDOWN
+                manual_cooldown = COOLDOWN_MANUAL
+                auto_cooldown = COOLDOWN_AUTO
             else:
                 if auto_cooldown > 0:
-                    if auto_cooldown > AUTO_COOLDOWN - 25:
+                    if auto_cooldown > COOLDOWN_AUTO - 25:
                         cv2.circle(image, MANUAL_COOLDOWN_POSITION, 5, BLUE_TUPLE, thickness=10)
                     auto_cooldown -= 1
                 else:
@@ -153,10 +190,7 @@ def painting():
                     logger.info(f'Speichere Foto: {image_path_auto}.')
                     write_image(image_raw, colors, thicknesses, left_positions, right_positions, str(image_path_auto))
                     auto_counter += 1
-                    auto_cooldown = AUTO_COOLDOWN
+                    auto_cooldown = COOLDOWN_AUTO
 
         cv2.imshow('Painting', image)
         cv2.waitKey(SKIP)
-
-
-

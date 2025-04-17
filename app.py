@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from app_util import setup_logging
 from painting import painting
@@ -8,10 +9,10 @@ from config import MODE
 logger = logging.getLogger(__name__)
 
 
-def main():
+def main(args):
     match MODE:
         case 'painting':
-            painting()
+            painting(args)
 
         case  'exploration':
             exploration()
@@ -21,4 +22,4 @@ def main():
 
 if __name__ == '__main__':
     setup_logging()
-    main()
+    main(sys.argv[1:])
