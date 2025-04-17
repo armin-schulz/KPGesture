@@ -13,3 +13,6 @@ Default options should work fine. If needed edit:
 `COOLDOWN_MANUAL` __int__ *: number of frames that have to pass before a manual snapshot is possible again after a manual snapshot* 
 &nbsp;&nbsp;&nbsp;&nbsp; default = 25 
 
+__pyinstaller__ command to create .exe \
+`pyinstaller --onefile --add-data "logging_config.json" --add-data ".venv\Lib\site-packages\mediapipe\modules\hand_landmark;mediapipe\modules\hand_landmark" --add-data ".venv\Lib\site-packages\mediapipe\modules\palm_detection;mediapipe\modules\palm_detection" app.py`
+

@@ -73,7 +73,7 @@ def draw_positions_connections(positions: deque[tuple[int, int,]], colors: list[
         older = previous
 
 
-def create_image_dirs(dir_id: str) -> tuple[Path, Path,]:
+def create_image_dirs(dir_id: str) -> tuple[Path, Path, Path,]:
     current_dir = Path(__file__).parent.absolute()
     image_dir = Path(current_dir).joinpath('fotos')
     personal_dir = image_dir.joinpath(dir_id)
@@ -83,7 +83,7 @@ def create_image_dirs(dir_id: str) -> tuple[Path, Path,]:
     auto_image_dir = personal_dir.joinpath('auto')
     for p in [image_dir, personal_dir, manual_image_dir, auto_image_dir]:
         p.mkdir(exist_ok=True)
-    return manual_image_dir, auto_image_dir
+    return personal_dir, manual_image_dir, auto_image_dir
 
 
 def write_image(image_raw: NDArray[np.uint8], colors: list[tuple[int, int, int,]],
@@ -126,14 +126,16 @@ def painting(args: list[str] | None = None) -> None:
     if args is None:
         args = list()
     line_length, thickness, jump_limit, auto_cooldown, manual_cooldown = get_options(args)
+    foto_dir, manual_dir, auto_dir = create_image_dirs(
+        datetime.datetime.fromtimestamp(time.time()).strftime('%d_%m_%Y_%H_%M_%S'))
     logger.info(f'''Options
     line length: {line_length} entries
     thickness: {thickness} pixels
     jump limit: {jump_limit} pixels
     cooldown auto: {auto_cooldown} frames
-    cooldown manual: {manual_cooldown} frames''')
+    cooldown manual: {manual_cooldown} frames
+    images path: {foto_dir}''')
 
-    manual_dir, auto_dir = create_image_dirs(datetime.datetime.fromtimestamp(time.time()).strftime('%d_%m_%Y_%H_%M_%S'))
     manual_counter, auto_counter = 1, 1
     captor = cv2.VideoCapture(0)
     captor.set(3, IMAGE_WIDTH)
@@ -143,14 +145,12 @@ def painting(args: list[str] | None = None) -> None:
     colors = shrink_list(all_colors, line_length)
     thicknesses = bend_list(1, thickness, line_length)
     radius = THICKNESS
-    image_middle = (IMAGE_WIDTH // 2, IMAGE_HEIGHT // 2)
+    left_start, right_start = (IMAGE_WIDTH // 4, IMAGE_HEIGHT // 2), ((3 * IMAGE_WIDTH) // 4, IMAGE_HEIGHT // 2)
 
     left_positions, right_positions = deque(maxlen=line_length), deque(maxlen=line_length)
-    left_positions.append(image_middle)
-    left_positions.append(image_middle)
-    right_positions.append(image_middle)
-    right_positions.append(image_middle)
-    previous_left, previous_right = image_middle, image_middle
+    left_positions.append(left_start)
+    right_positions.append(right_start)
+    previous_left, previous_right = left_start, right_start
 
     while True:
         success, image_raw = captor.read()
@@ -173,7 +173,10 @@ def painting(args: list[str] | None = None) -> None:
             manual_cooldown -= 1
             cv2.circle(image, (55, 55), 25, RED_TUPLE, thickness=50)
         else:
-            if keyboard.is_pressed('f'):
+            if keyboard.is_pressed('q'):
+                logger.info(f'Quitting')
+                exit(0)
+            elif keyboard.is_pressed('f'):
                 image_path_man = manual_dir.joinpath(f'{str(manual_counter)}.png')
                 logger.info(f'Speichere Foto: {image_path_man}.')
                 write_image(image_raw, colors, thicknesses, left_positions, right_positions, str(image_path_man))

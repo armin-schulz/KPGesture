@@ -16,18 +16,11 @@
       "formatter": "default",
       "level": "DEBUG",
       "stream": "ext://sys.stdout"
-    },
-    "file": {
-      "class": "logging.FileHandler",
-      "formatter": "detailed",
-      "level": "INFO",
-      "filename": "app.log",
-      "encoding": "utf8"
     }
   },
   "root": {
     "level": "DEBUG",
-    "handlers": ["console", "file"]
+    "handlers": ["console"]
   }
 }
 
