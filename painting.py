@@ -1,10 +1,8 @@
 import logging
 import os
-import sys
 import time
 import datetime
 from pathlib import Path
-from typing import Tuple
 
 import cv2
 import keyboard
@@ -17,7 +15,8 @@ from numpy.typing import NDArray
 
 from algebra import calc_distance_2d
 from app_util import get_colors_simple, shrink_list, bend_list
-from config import DRAW_LENGTH, THICKNESS, COOLDOWN_AUTO, COOLDOWN_MANUAL, JUMP_LIMIT
+from chirality import Chirality
+from config import DRAW_LENGTH, THICKNESS, COOLDOWN_AUTO, COOLDOWN_MANUAL, JUMP_LIMIT, SIDE
 from constants import IMAGE_WIDTH, IMAGE_HEIGHT, INDEX_INDEX_LMS, SKIP
 
 WHITE_TUPLE = (255, 255, 255)
@@ -50,17 +49,16 @@ def get_index_fingers(hands_data: dict) -> tuple[tuple[int, int,] | None, tuple[
             None if right_lms is None else right_lms[INDEX_INDEX_LMS][:2])
 
 
-def add_to_positions(current: tuple[int, int,] | None, previous: tuple[int, int,] | None,
-                     left_index_positions: deque[[int, int, ]]) -> tuple[tuple[int, int,], bool]:
+def add_to_positions(current: tuple[int, int,], previous: tuple[int, int,], jump_limit: int,
+                     positions: deque[[int, int, ]]) -> tuple[tuple[int, int,] | None, bool]:
     """
     Comparison with previous value to prevent jumping and misinterpreting left/right for right/left.
+    @:return last known position, True if jump limit is exceeded
     """
-    if current is not None:
-        movement = 999 if previous is None else calc_distance_2d(previous, current)
-        if movement < JUMP_LIMIT:
-            left_index_positions.append(current)
-            return current, False
-    return previous, True
+    if jump_limit >= calc_distance_2d(previous, current):
+        positions.append(current)
+        return current, True
+    return previous, False
 
 
 def draw_positions_connections(positions: deque[tuple[int, int,]], colors: list[tuple[int, int, int,]],
@@ -87,11 +85,13 @@ def create_image_dirs(dir_id: str) -> tuple[Path, Path, Path,]:
 
 
 def write_image(image_raw: NDArray[np.uint8], colors: list[tuple[int, int, int,]],
-                thicknesses: list[int], left_positions: deque[tuple[int, int,]],
-                right_positions: deque[tuple[int, int,]], image_path: str) -> None:
+                thicknesses: list[int], left_positions: deque[tuple[int, int,]] | None,
+                right_positions: deque[tuple[int, int,]] | None, image_path: str) -> None:
     image_write = cv2.flip(image_raw, 1)
-    draw_positions_connections(left_positions, colors, thicknesses, image_write)
-    draw_positions_connections(right_positions, colors, thicknesses, image_write)
+    if left_positions is not None:
+        draw_positions_connections(left_positions, colors, thicknesses, image_write)
+    if right_positions is not None:
+        draw_positions_connections(right_positions, colors, thicknesses, image_write)
     cv2.imwrite(image_path, image_write)
 
 
@@ -104,6 +104,7 @@ def get_options(args: list[str]) -> tuple[int, ...]:
     jump_limit = JUMP_LIMIT
     cooldown_auto = COOLDOWN_AUTO
     cooldown_manual = COOLDOWN_MANUAL
+    side = SIDE
     given_options = {p[0]: p[1] for p in map(lambda p: p if len(p) == 2 else [p[0], ''],
                                              map(lambda s: s.split('=', maxsplit=2), args))}
 
@@ -119,19 +120,37 @@ def get_options(args: list[str]) -> tuple[int, ...]:
             logger.info(f'Set {k}={values[i]} from arg.')
         except ValueError as e:
             logger.info(f'Can not get value from key {k}. Use default {values[i]}: {e}')
+    try:
+        if 'SIDE' in given_options:
+            side = Chirality[given_options['SIDE']]
+        else:
+            raise KeyError('No option given for SIDE.')
+    except KeyError as e:
+        logger.info(f'Can get value from key SIDE. Use default {side.name}: {e}')
+    values.append(side.value)
     return tuple(values)
+
+
+def meh(previous: tuple[int, int,], current: tuple[int, int,] | None, positions, jump_limit: int) -> (
+        tuple[tuple[int, int,], bool,]):
+    if current is None or (jump_limit != -1 and jump_limit < calc_distance_2d(previous, current)):
+        return previous, True
+    positions.append(current)
+    return current, False
 
 
 def painting(args: list[str] | None = None) -> None:
     if args is None:
         args = list()
-    line_length, thickness, jump_limit, auto_cooldown, manual_cooldown = get_options(args)
+    line_length, thickness, jump_limit, auto_cooldown, manual_cooldown, side_value = get_options(args)
+    side = Chirality(side_value)
     foto_dir, manual_dir, auto_dir = create_image_dirs(
         datetime.datetime.fromtimestamp(time.time()).strftime('%d_%m_%Y_%H_%M_%S'))
     logger.info(f'''Options
     line length: {line_length} entries
     thickness: {thickness} pixels
-    jump limit: {jump_limit} pixels
+    jump limit: {str(jump_limit) + 'pixels' if jump_limit != -1 else 'infinite'}
+    side: {side.name}
     cooldown auto: {auto_cooldown} frames
     cooldown manual: {manual_cooldown} frames
     images path: {foto_dir}''')
@@ -145,6 +164,7 @@ def painting(args: list[str] | None = None) -> None:
     colors = shrink_list(all_colors, line_length)
     thicknesses = bend_list(1, thickness, line_length)
     radius = THICKNESS
+    jump_limit_left, jump_limit_right = jump_limit, jump_limit
     left_start, right_start = (IMAGE_WIDTH // 4, IMAGE_HEIGHT // 2), ((3 * IMAGE_WIDTH) // 4, IMAGE_HEIGHT // 2)
 
     left_positions, right_positions = deque(maxlen=line_length), deque(maxlen=line_length)
@@ -152,22 +172,45 @@ def painting(args: list[str] | None = None) -> None:
     right_positions.append(right_start)
     previous_left, previous_right = left_start, right_start
 
+    if side == Chirality.LEFT:
+        right_positions = None
+        previous_right = None
+        jump_limit_left = -1
+    elif side == Chirality.RIGHT:
+        left_positions = None
+        previous_left = None
+        jump_limit_right = -1
+
     while True:
         success, image_raw = captor.read()
         image = cv2.flip(image_raw, 1)
+        radius = radius - 2 if radius > 4 else THICKNESS // 2
         hands_data, image_added = hand_detector.findHands(image.copy())
         current_left, current_right = get_index_fingers(hands_data)
-        previous_left, missing_left = add_to_positions(current_left, previous_left, left_positions)
-        previous_right, missing_right = add_to_positions(current_right, previous_right, right_positions)
-
-        draw_positions_connections(left_positions, colors, thicknesses, image)
-        draw_positions_connections(right_positions, colors, thicknesses, image)
-
-        radius = radius - 2 if radius > 4 else THICKNESS // 2
-        if missing_left:
+        missing_left, missing_right = False, False
+        if side == Chirality.BOTH or side == Chirality.LEFT:
+            previous_left, missing_left = meh(previous_left, current_left, left_positions, jump_limit_left)
+            draw_positions_connections(left_positions, colors, thicknesses, image)
             cv2.circle(image, previous_left, radius, WHITE_TUPLE, thickness=3)
-        if missing_right:
-            cv2.circle(image, previous_right, radius, WHITE_TUPLE, thickness=3)
+
+        if side == Chirality.BOTH or side == Chirality.RIGHT:
+            previous_right, missing_right = meh(previous_right, current_right, right_positions, jump_limit_right)
+
+        if side == Chirality.BOTH:
+            draw_positions_connections(left_positions, colors, thicknesses, image)
+            draw_positions_connections(right_positions, colors, thicknesses, image)
+            if missing_left:
+                cv2.circle(image, previous_left, radius, WHITE_TUPLE, thickness=3)
+            if missing_right:
+                cv2.circle(image, previous_right, radius, WHITE_TUPLE, thickness=3)
+        elif side == Chirality.LEFT:
+            draw_positions_connections(left_positions, colors, thicknesses, image)
+            if missing_left:
+                cv2.circle(image, previous_left, radius, WHITE_TUPLE, thickness=3)
+        elif side == Chirality.RIGHT:
+            draw_positions_connections(right_positions, colors, thicknesses, image)
+            if missing_right:
+                cv2.circle(image, previous_right, radius, WHITE_TUPLE, thickness=3)
 
         if manual_cooldown > 0:
             manual_cooldown -= 1
