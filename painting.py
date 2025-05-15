@@ -71,8 +71,9 @@ def draw_positions_connections(positions: deque[tuple[int, int,]], colors: list[
         older = previous
 
 
-def create_image_dirs(dir_id: str) -> tuple[Path, Path, Path,]:
-    current_dir = Path(__file__).parent.absolute()
+def create_image_dirs(dir_id: str, current_dir: str | None = None) -> tuple[Path, Path, Path,]:
+    if current_dir is None:
+        current_dir = Path(__file__).parent.absolute()
     image_dir = Path(current_dir).joinpath('fotos')
     personal_dir = image_dir.joinpath(dir_id)
     if os.path.exists(personal_dir):
@@ -145,7 +146,7 @@ def painting(args: list[str] | None = None) -> None:
     line_length, thickness, jump_limit, auto_cooldown, manual_cooldown, side_value = get_options(args)
     side = Chirality(side_value)
     foto_dir, manual_dir, auto_dir = create_image_dirs(
-        datetime.datetime.fromtimestamp(time.time()).strftime('%d_%m_%Y_%H_%M_%S'))
+        datetime.datetime.fromtimestamp(time.time()).strftime('%d_%m_%Y_%H_%M_%S'), current_dir="C:\\")
     logger.info(f'''Options
     line length: {line_length} entries
     thickness: {thickness} pixels

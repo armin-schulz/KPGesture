@@ -10,7 +10,7 @@ def setup_logging() -> None:
     logging.config.dictConfig(config)
 
 
-def get_colors_simple() -> list[tuple[int, ...]]:
+def get_colors_simple() -> list[tuple[int, int,int,]]:
     r = list()
     for c in range(3):
         i = c

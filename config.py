@@ -9,4 +9,4 @@ COOLDOWN_MANUAL: int = 25           # --> minimal number of frames between two m
 
 DEFAULT_MODE: str = 'painting'
 ###
-MODE: str = 'painting'
+MODE: str = 'painting_static'
