@@ -132,8 +132,11 @@ def get_options(args: list[str]) -> tuple[int, ...]:
     return tuple(values)
 
 
-def meh(previous: tuple[int, int,], current: tuple[int, int,] | None, positions, jump_limit: int) -> (
+def eval_current_position(previous: tuple[int, int,], current: tuple[int, int,] | None, positions, jump_limit: int) -> (
         tuple[tuple[int, int,], bool,]):
+    """
+    :return: current position, current is missing
+    """
     if current is None or (jump_limit != -1 and jump_limit < calc_distance_2d(previous, current)):
         return previous, True
     positions.append(current)
@@ -190,12 +193,12 @@ def painting(args: list[str] | None = None) -> None:
         current_left, current_right = get_index_fingers(hands_data)
         missing_left, missing_right = False, False
         if side == Chirality.BOTH or side == Chirality.LEFT:
-            previous_left, missing_left = meh(previous_left, current_left, left_positions, jump_limit_left)
+            previous_left, missing_left = eval_current_position(previous_left, current_left, left_positions, jump_limit_left)
             draw_positions_connections(left_positions, colors, thicknesses, image)
             cv2.circle(image, previous_left, radius, WHITE_TUPLE, thickness=3)
 
         if side == Chirality.BOTH or side == Chirality.RIGHT:
-            previous_right, missing_right = meh(previous_right, current_right, right_positions, jump_limit_right)
+            previous_right, missing_right = eval_current_position(previous_right, current_right, right_positions, jump_limit_right)
 
         if side == Chirality.BOTH:
             draw_positions_connections(left_positions, colors, thicknesses, image)

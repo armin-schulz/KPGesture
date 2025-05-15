@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 
 from app_util import get_colors_simple
 from chirality import Chirality
-from painting import create_image_dirs, get_options, get_index_fingers, meh, WHITE_TUPLE, draw_line, RED_TUPLE, \
+from painting import create_image_dirs, get_options, get_index_fingers, eval_current_position, WHITE_TUPLE, draw_line, RED_TUPLE, \
     MANUAL_COOLDOWN_POSITION, BLUE_TUPLE
 
 from config import THICKNESS, COOLDOWN_AUTO, COOLDOWN_MANUAL
@@ -70,11 +70,9 @@ def painting_static(args: list[str] | None = None) -> None:
     if side == Chirality.LEFT:
         right_positions = None
         previous_right = None
-        jump_limit_left = -1
     elif side == Chirality.RIGHT:
         left_positions = None
         previous_left = None
-        jump_limit_right = -1
 
     while True:
         success, image_raw = captor.read()
@@ -84,12 +82,12 @@ def painting_static(args: list[str] | None = None) -> None:
         current_left, current_right = get_index_fingers(hands_data)
         missing_left, missing_right = False, False
         if side == Chirality.BOTH or side == Chirality.LEFT:
-            previous_left, missing_left = meh(previous_left, current_left, left_positions, jump_limit_left)
+            previous_left, missing_left = eval_current_position(previous_left, current_left, left_positions, jump_limit_left)
             draw_positions_connections(left_positions, colors, thickness, image)
             cv2.circle(image, previous_left, radius, WHITE_TUPLE, thickness=3)
 
         if side == Chirality.BOTH or side == Chirality.RIGHT:
-            previous_right, missing_right = meh(previous_right, current_right, right_positions, jump_limit_right)
+            previous_right, missing_right = eval_current_position(previous_right, current_right, right_positions, jump_limit_right)
 
         if side == Chirality.BOTH:
             draw_positions_connections(left_positions, colors, thickness, image)
@@ -122,7 +120,9 @@ def painting_static(args: list[str] | None = None) -> None:
                 manual_cooldown = COOLDOWN_MANUAL
                 auto_cooldown = COOLDOWN_AUTO
             elif keyboard.is_pressed('r'):
-                left_positions, right_positions = list(), list()
+                logger.info(f'Reseting')
+                left_positions, right_positions = [left_start], [right_start]
+                previous_left, previous_right = left_start, right_start
             else:
                 if auto_cooldown > 0:
                     if auto_cooldown > COOLDOWN_AUTO - 25:
@@ -135,6 +135,6 @@ def painting_static(args: list[str] | None = None) -> None:
                     auto_counter += 1
                     auto_cooldown = COOLDOWN_AUTO
 
-        cv2.imshow('Painting', image)
+        cv2.imshow('Painting Static', image)
         cv2.waitKey(SKIP)
 
