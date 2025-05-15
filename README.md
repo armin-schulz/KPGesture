@@ -19,3 +19,13 @@ __pyinstaller__ command to create .exe \
 `pyinstaller --onefile --add-data="logging_config.json;." --add-data=".venv\Lib\site-packages\mediapipe\modules\hand_landmark;mediapipe\modules\hand_landmark" --add-data=".venv\Lib\site-packages\mediapipe\modules\palm_detection;mediapipe\modules\palm_detection" app.py
 `
 
+#### Modes
+- exploration: live, enhanced, schematic image; paint only moving fingertips, straight fingers  
+- painting: paint queue of last `DRAW_LENGTH` points
+- painting_static paint all recorded points
+
+#### Keys in painting_static
+- q...quit
+- f...make photo (if cooldown is zero)
+- r...reset painting
+
