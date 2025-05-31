@@ -31,7 +31,7 @@ def main(args):
             painting(args)
         case  'exploration':
             exploration()
-        case 'painting_staticq':
+        case 'painting_static':
             painting_static(args)
         case _:
             logger.error('No mode selected')

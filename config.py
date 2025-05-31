@@ -6,6 +6,5 @@ JUMP_LIMIT: int = 200               # --> tolerated distance of finger position 
 SIDE: Chirality = Chirality.BOTH    # --> which hand's index is drawn
 COOLDOWN_AUTO: int = 250            # --> number of frames that have to pass since the last made picture until an automatic picture is made
 COOLDOWN_MANUAL: int = 25           # --> minimal number of frames between two manual triggered pictures
-
 DEFAULT_MODE: str = 'painting'
 
