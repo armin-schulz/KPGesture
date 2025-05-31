@@ -8,5 +8,4 @@ COOLDOWN_AUTO: int = 250            # --> number of frames that have to pass sin
 COOLDOWN_MANUAL: int = 25           # --> minimal number of frames between two manual triggered pictures
 
 DEFAULT_MODE: str = 'painting'
-###
-MODE: str = 'painting_static'
+

@@ -4,7 +4,7 @@ import sys
 from app_util import setup_logging
 from painting import painting
 from exploration import exploration
-from config import MODE
+from config import DEFAULT_MODE
 from painting_static import painting_static
 
 logger = logging.getLogger(__name__)
@@ -19,8 +19,8 @@ def get_mode(args: list[str] | None = None) -> str:
             mode = comps[1]
             break
     if mode is None:
-        logger.info(f'Can not get value from key MODE. Use default value: {MODE} ')
-        mode = MODE
+        logger.info(f'Can not get value from key MODE. Use default value: {DEFAULT_MODE} ')
+        mode = DEFAULT_MODE
     return mode
 
 
@@ -29,10 +29,9 @@ def main(args):
     match mode:
         case 'painting':
             painting(args)
-
         case  'exploration':
             exploration()
-        case 'painting_static':
+        case 'painting_staticq':
             painting_static(args)
         case _:
             logger.error('No mode selected')
